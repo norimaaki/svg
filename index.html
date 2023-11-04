@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>SVGメーカー</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    #canvas {
+      border: 1px solid #000;
+      margin: 20px auto;
+    }
+    #controls {
+      margin-bottom: 20px;
+    }
+    #clearButton {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 0 10px;
+    }
+    input[type="color"] {
+      vertical-align: middle;
+      margin: 0 10px;
+    }
+    #downloadButton {
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+    @media (max-width: 600px) {
+      #clearButton {
+        margin: 10px;
+      }
+      input[type="color"] {
+        margin: 10px;
+      }
+      #downloadButton {
+        margin: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>鉛筆のように描くSVGメーカー</h1>
+  <div id="controls">
+    <label for="penSize">ペンのサイズ:</label>
+    <input type="range" id="penSize" min="1" max="20" value="5">
+    <input type="color" id="penColor" value="#000000">
+    <button id="clearButton">クリア</button>
+    <button id="downloadButton">ダウンロード</button>
+  </div>
+  <svg id="canvas" width="100%" height="400"></svg>
+  
+  <script>
+    let isDrawing = false;
+    let offsetX, offsetY;
+    const canvas = document.getElementById('canvas');
+    
+    function startDrawing(e) {
+      isDrawing = true;
+      const penSize = document.getElementById('penSize').value;
+      const penColor = document.getElementById('penColor').value;
+      if (e.touches) {
+        offsetX = e.touches[0].clientX - canvas.getBoundingClientRect().left;
+        offsetY = e.touches[0].clientY - canvas.getBoundingClientRect().top;
+      } else {
+        offsetX = e.offsetX;
+        offsetY = e.offsetY;
+      }
+      const newLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      newLine.setAttribute('points', `${offsetX},${offsetY}`);
+      newLine.setAttribute('stroke', penColor);
+      newLine.setAttribute('stroke-width', penSize);
+      newLine.setAttribute('fill', 'none');
+      canvas.appendChild(newLine);
+    }
+    
+    function draw(e) {
+      e.preventDefault();
+      if (isDrawing) {
+        const penSize = document.getElementById('penSize').value;
+        const penColor = document.getElementById('penColor').value;
+        let newPoint;
+        if (e.touches) {
+          newPoint = `${e.touches[0].clientX - canvas.getBoundingClientRect().left},${e.touches[0].clientY - canvas.getBoundingClientRect().top}`;
+        } else {
+          newPoint = `${e.offsetX},${e.offsetY}`;
+        }
+        const lastLine = canvas.lastChild;
+        const points = lastLine.getAttribute('points');
+        const updatedPoints = points + ' ' + newPoint;
+        lastLine.setAttribute('points', updatedPoints);
+        lastLine.setAttribute('stroke', penColor);
+        lastLine.setAttribute('stroke-width', penSize);
+      }
+    }
+    
+    function stopDrawing() {
+      isDrawing = false;
+    }
+    
+    function clearCanvas() {
+      while (canvas.firstChild) {
+        canvas.removeChild(canvas.firstChild);
+      }
+    }
+
+    function downloadSVG() {
+      const svgData = new XMLSerializer().serializeToString(document.getElementById('canvas'));
+      const blob = new Blob([svgData], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'drawing.svg';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    
+    document.getElementById('canvas').addEventListener('mousedown', startDrawing);
+    document.getElementById('canvas').addEventListener('mousemove', draw);
+    document.addEventListener('mouseup', stopDrawing);
+    document.getElementById('canvas').addEventListener('touchstart', startDrawing);
+    document.getElementById('canvas').addEventListener('touchmove', draw);
+    document.addEventListener('touchend', stopDrawing);
+    document.getElementById('clearButton').addEventListener('click', clearCanvas);
+    document.getElementById('downloadButton').addEventListener('click', downloadSVG);
+  </script>
+</body>
+</html>
